@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Coach Booking System</title>
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      font-family: Arial, sans-serif;
+    }
+
+    .column {
+      height: 100%;
+      padding: 15px;
+      box-sizing: border-box;
+    }
+
+    .column:first-child {
+      width: 30vw;
+      background-color: #f0f0f0;
+    }
+
+    .column:last-child {
+      min-width: 70vw;
+      overflow-y: auto;
+      background-color: #ffffff;
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-content: center;
+      justify-content: center;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 10px;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      font-size: 1.2em;
+      margin-bottom: 15px;
+      box-sizing: border-box;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 1.2em;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+      display: block;
+      margin-top: 10px;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    .box {
+      width: calc(60vw / 7 - 15px);
+      height: 45px;
+      margin: 7.5px;
+      background-color: #e0e0e0;
+      display: inline-block;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+
+    .column:last-child .box:nth-last-child(-n + 3) {
+      margin-left: auto;
+      margin-right: auto;
+    }
+    #booked-user-name{
+      list-style: none;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="column">
+    <label for="name">Name:</label>
+    <input type="text" id="name" name="name" placeholder="Enter your name" />
+
+    <label for="number">No. of Seats:</label>
+    <input type="number" id="number" name="number" placeholder="Enter number of seats" />
+    <div class="error-box" id="error">
+      You can book 7 seats at maximum.
+    </div>
+    <button type="button" id="book-seats">Book</button>
+    <br>
+    <ul class="seat-no" id="seat-list">
+      <li class="name" id="booked-user-name"></li>
+    </ul>
+    <ul>
+      <div class="box" style="background-color: lightcoral;" >x</div> : represent already booked seats.
+      <div class="box" >x</div> : represent available seats
+      <div class="box" style="background-color: lightGreen;">x</div> : represent seats booked by you.
+
+    </ul>
+  </div>
+  <div class="column" id="seats">
+    <!-- Generate boxes dynamically with JavaScript -->
+  </div>
+</body>
+<script>
+  const getCurrentStatus = async () => {
+    await fetch('/booked-status', {
+      method: "GET",
+      'Content-Type': 'application/json'
+    }).then(res => res.json())
+      .then(res => {
+        if (res.bookedSeats) {
+          for (let i = 0; i < res.bookedSeats.length; i++) {
+            document.getElementById(`${res.bookedSeats[i]}`).style.backgroundColor = 'lightcoral';
+          }
+        }
+      })
+      .catch(err => console.log(err))
+  }
+  for (let i = 1; i <= 80; i++) {
+    const box = document.createElement("div");
+    box.className = "box";
+    box.id = `${i}`;
+    box.textContent = `${i}`;
+    document.getElementById('seats').appendChild(box);
+    if (i % 7 === 0) {
+      const br = document.createElement("br");
+      document.getElementById('seats').appendChild(br);
+    }
+  }
+  setTimeout(getCurrentStatus, 500);
+</script>
+
+<script>
+  //Book Seats
+  document.getElementById('book-seats').addEventListener("click", async () => {
+    const name = document.getElementById("name").value;
+    const number = parseInt(document.getElementById("number").value);
+    let errorBox = document.getElementById("error");
+
+    if (!name) {
+      errorBox.textContent = "Invalid Name";
+      return;
+    }
+    if (number > 7 || isNaN(number)) {
+      errorBox.textContent = "Enter number less than 7";
+      return;
+    }
+
+    try {
+      const response = await fetch('/book-seats', {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name, number })
+      }).then(res => res.json());
+      if (!response.bookedSeats) {
+        errorBox.textContent = "Seat Booking Failed";
+        return;
+      }
+      const list = document.getElementById("seat-list")
+      document.getElementById("booked-user-name").textContent = `Seats booked in name of ${name}`;
+      for (const item of response.bookedSeats) {
+        const li = document.createElement('li');
+        li.className = "booked-seats";
+        li.textContent = `Seat No. ${item}`;
+        list.appendChild(li);
+        document.getElementById(`${item}`).style.backgroundColor = "lightGreen";
+      }
+    } catch (error) {
+      console.log(error);
+      errorBox.textContent = "Seat Booking Failed";
+    }
+
+  })
+
+</script>
+
+</html>
